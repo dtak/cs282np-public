@@ -5,6 +5,7 @@ import numpy.random as npr
 from scipy.misc import logsumexp
 import matplotlib.pyplot as plt 
 import pdb 
+from copy import copy 
 
 from make_toy_data import generate_data, generate_gg_blocks
 from mcmc import cllikelihood, lpriorZ 
@@ -15,7 +16,7 @@ from simulate import sample_Z_weaklimit
 # this is simulated data, we can easily create more!
 data_count = 5
 data_type = 'gg'
-data_set , Z , A = generate_data( data_count , data_type , sigma_n = 0.1 )
+data_set , Z_true , A_true = generate_data( data_count , data_type , sigma_n = 0.1 )
 
 # Choose an alpha and sigma 
 sigma_a = 5
@@ -66,21 +67,16 @@ for k_index in range( k_forward ):
     Z_set.append( Z ) 
         
 # ---- AIS Backward ---- # 
-# Generate a Z and a data set 
-Z = sample_Z_weaklimit( data_count , truncation=4 , alpha=alpha )
-A = generate_gg_blocks()
-dim_count = A.shape[1] 
-new_data_set = np.dot( Z , A ) + sigma_n * npr.normal( 0 , 1 , [ data_count , dim_count ] )
-
 # Run it backwards
 print "On backward" 
 lweight = 0; beta = 1.0 
-ll_set = np.zeros( ( beta_count ) ) # for debugging 
+ll_set = np.zeros( ( beta_count ) ) # for debugging
+Z = copy( Z_true ) 
 for beta_index in range( beta_count ):
     beta = beta - beta_step
-    cll = cllikelihood( new_data_set , Z , sigma_a , sigma_n )
+    cll = cllikelihood( data_set , Z , sigma_a , sigma_n )
     lweight = lweight - beta_step * cll 
-    Z = resample_Z_weighted( Z , new_data_set , alpha , sigma_n , beta )
+    Z = resample_Z_weighted( Z , data_set , alpha , sigma_n , beta )
 upper_bound = lweight 
         
 # ---- Explore the Results ---- #
